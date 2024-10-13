@@ -4,6 +4,7 @@ console.info("%c  GAODE MAP CARD  \n%c Version 1.2.7 ",
 
 import 'https://webapi.amap.com/loader.js';
 import './w3color.js';
+import './transform.js'
 
 const preloadCard = type => window.loadCardHelpers()
 .then(({ createCardElement }) => createCardElement({type}));
@@ -78,7 +79,7 @@ class GaodeMapCard extends HTMLElement {
   connectedCallback(){
     // console.log(this.config);
     this._loadMap({
-      key: this.config.key||"ce3b1a3a7e67fc75810ce1ba1f83c01a",   // 申请好的Web端开发者Key，首次调用 load 时必填 f87e0c9c4f3e1e78f963075d142979f0
+      key: this.config.key,   // 申请好的Web端开发者Key，首次调用 load 时必填 f87e0c9c4f3e1e78f963075d142979f0
       version: "2.0",   // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
       plugins: ['AMap.MoveAnimation'] //插件列表
     });
@@ -236,16 +237,22 @@ class GaodeMapCard extends HTMLElement {
     // console.log(distance);
     if(distance>5){
       const that  = this;
-      AMap.convertFrom(gps, type, function (status, result) {
-        if (result.info === 'ok' && that.markers[entity]) {
-          that.markers[entity].moveTo(result.locations[0], {
+      // console.log('AMap.convertFrom', gps, type)
+      // AMap.convertFrom(gps, type, function (status, result) {
+        if (that.markers[entity]) {
+        // if (result.info === 'ok' && that.markers[entity]) {
+          if(type=='gps'){
+            const {lat, lng} = window.eviltransform.wgs2gcj(objstates.attributes.latitude, objstates.attributes.longitude)
+            gps = [lng, lat];
+          }
+          that.markers[entity].moveTo(gps, {
               autoRotation: false
           })
           if(hours_to_show>0 && that.trace){
             that._gethistory(hours_to_show, entity, "")
           }
         }
-      });
+      // });
     }
     this.positions[entity] = gps;
   }
@@ -261,7 +268,11 @@ class GaodeMapCard extends HTMLElement {
     let that = this;
     if(type=='gaode'){
       that._showMarker(gps,entity,color,type);
-    }else{
+    }else if(type=='gps'){
+      const {lat, lng} = window.eviltransform.wgs2gcj(objstates.attributes.latitude, objstates.attributes.longitude)
+      gps = new AMap.LngLat(lng, lat);
+      that._showMarker(gps,entity,color,type);
+    }{
       AMap.convertFrom(gps, type, function (status, result) {
         // console.info(result.locations[0])
         if (result.info === 'ok') {
@@ -327,10 +338,15 @@ class GaodeMapCard extends HTMLElement {
         var lineArr = []
         for(var i in arr) {
           let p = arr[i].attributes;
-          if(p.longitude)lineArr.push(new AMap.LngLat(p.longitude,p.latitude));
+          let [lat, lng] = [p.latitude, p.longitude];
+          if(type=='gps'){
+            const result = window.eviltransform.wgs2gcj(p.latitude, p.longitude)
+            lat = result.lat;
+            lng = result.lng;
+          }
+          if(p.longitude)lineArr.push(new AMap.LngLat(lng,lat));
         }
 
-        if(type=='gaode'){
           var path2 = lineArr;
           if( that.paths[entity]){
             that.paths[entity].setPath(path2);
@@ -359,41 +375,6 @@ class GaodeMapCard extends HTMLElement {
               });
             }
           }
-        }else{
-          AMap.convertFrom(lineArr, type, function (status, result) {
-            if (result.info === 'ok') {
-              var path2 = result.locations;
-              if( that.paths[entity]){
-                that.paths[entity].setPath(path2);
-              }else{
-                that.paths[entity] = new AMap.Polyline({
-                  map: that.map,
-                  path: path2,  
-                  zIndex: 200,
-                  strokeWeight: 3, 
-                  strokeColor: color, 
-                  strokeOpacity: 0.5,
-                  lineJoin: 'round' 
-                });
-    
-                for(var i=0;i<path2.length;i+=1){
-                  var center = path2[i];
-                  new AMap.CircleMarker({
-                    map: that.map,
-                    center:center,
-                    strokeWeight:0,
-                    radius:4,
-                    fillColor:color,
-                    fillOpacity:0.5,
-                    zIndex:200,
-                    bubble:true
-                  });
-                }
-              }
-  
-            }
-          });
-        }
 
       }
     })
