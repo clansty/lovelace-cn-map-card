@@ -195,7 +195,7 @@ class GaodeMapCard extends HTMLElement {
     d.style.paddingBottom = 100*(this.config.aspect_ratio||1)+"%";
   }
   _loadMap(config){
-    
+    this.oldentities = null;
     AMapLoader.load(config).then(()=>{
       let mapContainer = this.root.querySelector("#container");
       this.map = new AMap.Map(mapContainer,{
@@ -257,7 +257,6 @@ class GaodeMapCard extends HTMLElement {
     this.positions[entity] = gps;
   }
   _addMarker(entity,index,type){
-    
     let color = this._colors[index%this._colors.length];
     let objstates = this._hass.states[entity];
     if(!objstates || !objstates.attributes.longitude){
@@ -422,6 +421,7 @@ class GaodeMapCard extends HTMLElement {
                 position: absolute;
                 bottom: 0;
                 left: 10px;
+                display: none;
               }
               .amap-marker ha-icon{
                 position: absolute;
