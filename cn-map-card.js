@@ -1,4 +1,4 @@
-console.info("%c  GAODE MAP CARD  \n%c Version 1.2.7 ",
+console.info("%c  GAODE MAP CARD  \n%c Version 1.2.7-clansty ",
 "color: orange; font-weight: bold; background: black", 
 "color: white; font-weight: bold; background: dimgray");
 
@@ -181,8 +181,13 @@ class GaodeMapCard extends HTMLElement {
     }
     //更新视界
     // console.info(this.fit)
-    if(this.fit >= this.entities.length){
+    if(this.fit >= this.entities.length && !this.config.nofit){
       this.map.setFitView(this.persons, false, [40, 40, 40, 40]);
+      this.fit = 0;
+    }
+    else if(this.fit >= this.entities.length){
+      // 风云再起观前街店
+      this.map.setCenter(new AMap.LngLat(120.62431856,31.31158598))
       this.fit = 0;
     }
   }
@@ -192,7 +197,14 @@ class GaodeMapCard extends HTMLElement {
 
     this.config = deepClone(config);
     let d = this.root.querySelector("#root")
-    d.style.paddingBottom = 100*(this.config.aspect_ratio||1)+"%";
+    let aspect_ratio = this.config.aspect_ratio || 1;
+    if (aspect_ratio === "auto") {
+      aspect_ratio = window.innerHeight / window.innerWidth;
+    }
+    if (isNaN(aspect_ratio)) {
+      aspect_ratio = 1;
+    }
+    d.style.paddingBottom = 100*(aspect_ratio)+"%";
   }
   _loadMap(config){
     this.oldentities = null;
@@ -286,7 +298,10 @@ class GaodeMapCard extends HTMLElement {
     let domain = entity.split('.')[0];
     let hours_to_show =this.config.hours_to_show||0;
     let objstates = this._hass.states[entity];
-    let entityPicture = objstates.attributes.entity_picture || '';
+    let entityPicture = objstates.attributes.entity_picture || objstates.attributes.entity_picture2 || '';
+    if(!entityPicture && objstates.attributes.icon?.startsWith('http')){
+      entityPicture = objstates.attributes.icon;
+    }
     let entityName =objstates.attributes.friendly_name?objstates.attributes.friendly_name.split(' ').map(function (part) { return part.substr(0, 1); }).join('') : '';
     let markerContent = `<ha-entity-marker width="20" height="20" entity-id="`+entity+`" entity-name="`+entityName+`" entity-picture="`+entityPicture+`" entity-color="`+color+`"></ha-entity-marker>`
 
@@ -427,6 +442,10 @@ class GaodeMapCard extends HTMLElement {
                 position: absolute;
                 bottom: calc(50% - 12px);
                 left: calc(50% - 12px);
+              }
+
+              .amap-marker {
+                opacity:90%;
               }
 
               ha-icon-button {
